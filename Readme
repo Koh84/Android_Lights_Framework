@@ -1,0 +1,71 @@
+@modified lights from sony files
+@hence, recompiled to  get system.img
+
+@used previous build linux kernel
++ modification to kernel was leds_4412.c under linux-3.0.86/drivers/leds
+the difference is that this hal driver can be accessed using 
+
+echo 255>sys/class/leds/led1/brightness
+cat /sys/class/leds/led1/brightness
+cat /sys/class/leds/led1/max_brightness
+
+echo timer>/sys/class/leds/led1/trigger
+echo 100>/sys/class/leds/led1/delay_on
+echo 200>/sys/class/leds/led1/delay_off
+
+Also modify the led-class.c 0644 to 0666 to allow us to use access the above command line parameter
+Also modify the ledtrig-timer.c 0644 to 0666 to allow us to use access the above command line parameter
+
+put leds_4412.c inside drivers/leds
+modify drivers/leds/Makefile:
+obj-y += leds_4412.o
+
+make menuconfig
+
+CONFIG_LEDS_CLASS
+CONFIG_LEDS_TRIGGERS
+CONFIG_LEDS_TRIGGER_TIMER
+
+-> Device Drivers
+  -> LED Support
+   [*]   LED Class Support    
+   [*]   LED Trigger support
+   <*>   LED Timer Trigger
+
+make zImage
+
+
+HAL: lights.c
+put files inside
+hardware/libhardware/modules/lights/lights.c
+hardware/libhardware/modules/lights/Android.mk
+
+
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+
+LOCAL_MODULE := lights.tiny4412
+
+# HAL module implementation stored in
+# hw/<VIBRATOR_HARDWARE_MODULE_ID>.default.so
+LOCAL_MODULE_RELATIVE_PATH := hw
+LOCAL_C_INCLUDES := hardware/libhardware
+LOCAL_SRC_FILES := lights.c
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_MODULE_TAGS := eng
+
+include $(BUILD_SHARED_LIBRARY)
+
+make hardware/libhardware/modules/lights -B
+make snod
+
+compare generated .so file with friendlyarm given lights.so
+diff vendor/friendly-arm/tiny4412/proprietary/lights.tiny4412.so out/target/product/tiny4412/system/lib/hw/lights.tiny4412.so 
+
+./gen-img.sh
+
+after bootup
+
+use the following command
+logcat lights:V *:S
